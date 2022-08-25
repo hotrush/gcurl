@@ -1,4 +1,4 @@
-module github.com/vic3lord/parsecurl
+module github.com/vic3lord/gcurl
 
 go 1.19
 
