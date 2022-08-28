@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/mattn/go-shellwords"
@@ -111,8 +110,7 @@ func Parse(curl string) (*Request, error) {
 				break
 
 			case "user":
-				req.Header["Authorization"] = "Basic " +
-					base64.StdEncoding.EncodeToString([]byte(arg))
+				req.Header["Authorization"] = "Basic " + base64.StdEncoding.EncodeToString([]byte(arg))
 				state = ""
 				break
 
@@ -134,17 +132,19 @@ func Parse(curl string) (*Request, error) {
 	}
 
 	// format json body
-	if value, ok := req.Header["Content-Type"]; ok && value == "application/json" {
-		decoder := json.NewDecoder(strings.NewReader(req.Body))
+	if val := req.Header["Content-Type"]; val == "application/json" {
 		jsonData := make(map[string]interface{})
-		if err := decoder.Decode(&jsonData); err == nil {
-			buffer := &bytes.Buffer{}
-			encoder := json.NewEncoder(buffer)
-			encoder.SetEscapeHTML(false)
-			if err = encoder.Encode(jsonData); err == nil {
-				req.Body = strings.ReplaceAll(buffer.String(), "\n", "")
-			}
+		if err := json.NewDecoder(strings.NewReader(req.Body)).Decode(&jsonData); err != nil {
+			return nil, err
+
 		}
+		var buffer *bytes.Buffer
+		encoder := json.NewEncoder(buffer)
+		encoder.SetEscapeHTML(false)
+		if err = encoder.Encode(jsonData); err != nil {
+			return nil, err
+		}
+		req.Body = strings.ReplaceAll(buffer.String(), "\n", "")
 	}
 	return req, err
 }
@@ -152,9 +152,7 @@ func Parse(curl string) (*Request, error) {
 func rewrite(args []string) []string {
 	res := make([]string, 0)
 	for _, arg := range args {
-
 		arg = strings.TrimSpace(arg)
-
 		if arg == "\n" {
 			continue
 		}
@@ -175,15 +173,15 @@ func rewrite(args []string) []string {
 }
 
 func validURL(u string) bool {
-	_, err := url.Parse(u)
-	if err != nil {
-		return false
-	}
-	return true
+	return strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")
+	// _, err := url.Parse(u)
+	// if err != nil {
+	// 	return false
+	// }
+	// return true
 }
 
 func parseField(arg string) []string {
-	arg = strings.ToLower(arg)
 	index := strings.Index(arg, ":")
 	return []string{arg[0:index], arg[index+2:]}
 }

@@ -1,93 +1,105 @@
 package gcurl
 
 import (
+	"net/http"
 	"testing"
 
-	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/require"
 )
 
-type M map[string]interface{}
-
 func TestParse(t *testing.T) {
-	addSample(t, "curl -XPUT http://api.sloths.com/sloth/4", M{
-		"method": "PUT",
-		"url":    "http://api.sloths.com/sloth/4",
-	})
-
-	addSample(t, "curl http://api.sloths.com", M{
-		"method": "GET",
-		"url":    "http://api.sloths.com",
-	})
-
-	addSample(t, `curl -H "Accept-Encoding: gzip" --compressed http://api.sloths.com`, M{
-		"method": "GET",
-		"url":    "http://api.sloths.com",
-		"header": M{
-			"Accept-Encoding": "gzip",
+	var tests = []struct {
+		name     string
+		given    string
+		expected *Request
+	}{
+		{
+			"simple get",
+			"curl https://api.sloths.com",
+			&Request{
+				Method: http.MethodGet,
+				URL:    "https://api.sloths.com",
+				Header: map[string]string{},
+			},
 		},
-	})
-
-	addSample(t, "curl -X DELETE http://api.sloths.com/sloth/4", M{
-		"method": "DELETE",
-		"url":    "http://api.sloths.com/sloth/4",
-	})
-
-	addSample(t, `curl -d "foo=bar" https://api.sloths.com`, M{
-		"method": "POST",
-		"url":    "https://api.sloths.com",
-		"header": M{
-			"Content-Type": "application/x-www-form-urlencoded",
+		{
+			"simple put",
+			"curl -XPUT https://api.sloths.com/sloth/4",
+			&Request{
+				Method: http.MethodPut,
+				URL:    "https://api.sloths.com/sloth/4",
+				Header: map[string]string{},
+			},
 		},
-		"body": "foo=bar",
-	})
-
-	addSample(t, `curl -H "Accept: text/plain" --header "User-Agent: slothy" https://api.sloths.com`, M{
-		"method": "GET",
-		"url":    "https://api.sloths.com",
-		"header": M{
-			"Accept":     "text/plain",
-			"User-Agent": "slothy",
+		{
+			"encoding gzip",
+			`curl -H "Accept-Encoding: gzip" --compressed http://api.sloths.com`,
+			&Request{
+				Method: http.MethodGet,
+				URL:    "http://api.sloths.com",
+				Header: map[string]string{
+					"Accept-Encoding": "gzip",
+				},
+			},
 		},
-	})
-
-	addSample(t, "curl --cookie 'species=sloth;type=galactic' slothy https://api.sloths.com", M{
-		"method": "GET",
-		"url":    "https://api.sloths.com",
-		"header": M{
-			"Cookie": "species=sloth;type=galactic",
+		{
+			"delete sloth",
+			"curl -X DELETE https://api.sloths.com/sloth/4",
+			&Request{
+				Method: http.MethodDelete,
+				URL:    "https://api.sloths.com/sloth/4",
+				Header: map[string]string{},
+			},
 		},
-	})
-
-	addSample(t, "curl --location --request GET 'http://api.sloths.com/users?token=admin'", M{
-		"method": "GET",
-		"url":    "http://api.sloths.com/users?token=admin",
-	})
-}
-
-func addSample(t *testing.T, url string, exp M) {
-	t.Helper()
-	request, err := Parse(url)
-	if err != nil {
-		t.Fatalf("Failed parsing: %v", err)
+		{
+			"url encoded data",
+			`curl -d "foo=bar" https://api.sloths.com/sloth/4`,
+			&Request{
+				Method: http.MethodPost,
+				URL:    "https://api.sloths.com/sloth/4",
+				Header: map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+				Body:   "foo=bar",
+			},
+		},
+		{
+			"user agent",
+			`curl -H "Accept: text/plain" --header "User-Agent: slothy" https://api.sloths.com`,
+			&Request{
+				Method: http.MethodGet,
+				URL:    "https://api.sloths.com",
+				Header: map[string]string{
+					"Accept":     "text/plain",
+					"User-Agent": "slothy",
+				},
+			},
+		},
+		{
+			"cookie",
+			`curl --cookie 'species=sloth;type=galactic' slothy https://api.sloths.com`,
+			&Request{
+				Method: http.MethodGet,
+				URL:    "https://api.sloths.com",
+				Header: map[string]string{
+					"Cookie": "species=sloth;type=galactic",
+				},
+			},
+		},
+		{
+			"location",
+			`curl --location --request GET 'https://api.sloths.com/users?token=admin'`,
+			&Request{
+				Method: http.MethodGet,
+				URL:    "https://api.sloths.com/users?token=admin",
+				Header: map[string]string{},
+			},
+		},
 	}
-	check(t, exp, request)
-}
-
-func check(t *testing.T, exp M, got *Request) {
-	t.Helper()
-	for key, value := range exp {
-		switch key {
-		case "method":
-			assert.Equal(t, value, got.Method)
-		case "url":
-			assert.Equal(t, value, got.URL)
-		case "body":
-			assert.Equal(t, value, got.Body)
-		case "header":
-			headers := value.(M)
-			for k, v := range headers {
-				assert.Equal(t, v, got.Header[k])
-			}
-		}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			actual, err := Parse(tt.given)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, actual)
+		})
 	}
 }
