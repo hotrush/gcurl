@@ -16,6 +16,17 @@ var (
 	ErrNotValidCurlCommand = errors.New("not a valid cURL command")
 )
 
+const (
+	// Header map keys
+	KeyContentType   = "content-type"
+	KeyUserAgent     = "user-agent"
+	KeyCookie        = "cookie"
+	KeyAuthorization = "authorization"
+
+	// Content-Types
+	ContentTypeJSON = "application/json"
+)
+
 type Header map[string]string
 
 type Request struct {
@@ -82,22 +93,22 @@ func Parse(curl string) (*Request, error) {
 			switch state {
 			case "header":
 				fields := parseField(arg)
-				req.Header[fields[0]] = strings.TrimSpace(fields[1])
+				req.Header[strings.ToLower(fields[0])] = strings.TrimSpace(fields[1])
 				state = ""
 				break
 
 			case "user-agent":
-				req.Header["User-Agent"] = arg
+				req.Header[KeyUserAgent] = arg
 				state = ""
 				break
 
 			case "data":
 				if req.Method == http.MethodGet || req.Method == http.MethodHead {
-					req.Method = "POST"
+					req.Method = http.MethodPost
 				}
 
-				if !hasContentType(*req) {
-					req.Header["Content-Type"] = "application/x-www-form-urlencoded"
+				if !hasContentType(req.Header) {
+					req.Header[KeyContentType] = "application/x-www-form-urlencoded"
 				}
 
 				if len(req.Body) == 0 {
@@ -110,7 +121,7 @@ func Parse(curl string) (*Request, error) {
 				break
 
 			case "user":
-				req.Header["Authorization"] = "Basic " + base64.StdEncoding.EncodeToString([]byte(arg))
+				req.Header[KeyAuthorization] = "Basic " + base64.StdEncoding.EncodeToString([]byte(arg))
 				state = ""
 				break
 
@@ -120,7 +131,7 @@ func Parse(curl string) (*Request, error) {
 				break
 
 			case "cookie":
-				req.Header["Cookie"] = arg
+				req.Header[KeyCookie] = arg
 				state = ""
 				break
 
@@ -131,8 +142,8 @@ func Parse(curl string) (*Request, error) {
 
 	}
 
-	// format json body
-	if val := req.Header["Content-Type"]; val == "application/json" {
+	// Format JSON body.
+	if val := req.Header[KeyContentType]; val == ContentTypeJSON {
 		jsonData := make(map[string]interface{})
 		if err := json.NewDecoder(strings.NewReader(req.Body)).Decode(&jsonData); err != nil {
 			return nil, err
@@ -174,11 +185,6 @@ func rewrite(args []string) []string {
 
 func validURL(u string) bool {
 	return strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")
-	// _, err := url.Parse(u)
-	// if err != nil {
-	// 	return false
-	// }
-	// return true
 }
 
 func parseField(arg string) []string {
@@ -186,7 +192,7 @@ func parseField(arg string) []string {
 	return []string{arg[0:index], arg[index+2:]}
 }
 
-func hasContentType(req Request) bool {
-	_, ok := req.Header["Content-Type"]
+func hasContentType(h Header) bool {
+	_, ok := h[KeyContentType]
 	return ok
 }

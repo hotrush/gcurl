@@ -38,7 +38,7 @@ func TestParse(t *testing.T) {
 				Method: http.MethodGet,
 				URL:    "http://api.sloths.com",
 				Header: map[string]string{
-					"Accept-Encoding": "gzip",
+					"accept-encoding": "gzip",
 				},
 			},
 		},
@@ -57,7 +57,7 @@ func TestParse(t *testing.T) {
 			&Request{
 				Method: http.MethodPost,
 				URL:    "https://api.sloths.com/sloth/4",
-				Header: map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+				Header: map[string]string{"content-type": "application/x-www-form-urlencoded"},
 				Body:   "foo=bar",
 			},
 		},
@@ -68,8 +68,8 @@ func TestParse(t *testing.T) {
 				Method: http.MethodGet,
 				URL:    "https://api.sloths.com",
 				Header: map[string]string{
-					"Accept":     "text/plain",
-					"User-Agent": "slothy",
+					"accept":     "text/plain",
+					"user-agent": "slothy",
 				},
 			},
 		},
@@ -80,7 +80,7 @@ func TestParse(t *testing.T) {
 				Method: http.MethodGet,
 				URL:    "https://api.sloths.com",
 				Header: map[string]string{
-					"Cookie": "species=sloth;type=galactic",
+					"cookie": "species=sloth;type=galactic",
 				},
 			},
 		},
