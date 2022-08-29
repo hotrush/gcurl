@@ -149,7 +149,7 @@ func Parse(curl string) (*Request, error) {
 			return nil, err
 
 		}
-		var buffer *bytes.Buffer
+		buffer :=&bytes.Buffer{}
 		encoder := json.NewEncoder(buffer)
 		encoder.SetEscapeHTML(false)
 		if err = encoder.Encode(jsonData); err != nil {

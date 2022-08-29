@@ -62,6 +62,16 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
+			"JSON",
+			`curl -d '{"hello": "world"}' -H 'content-type: application/json' https://api.sloths.com/sloth/4`,
+			&Request{
+				Method: http.MethodPost,
+				URL:    "https://api.sloths.com/sloth/4",
+				Header: map[string]string{"content-type": "application/json"},
+				Body:   `{"hello":"world"}`,
+			},
+		},
+		{
 			"user agent",
 			`curl -H "Accept: text/plain" --header "User-Agent: slothy" https://api.sloths.com`,
 			&Request{
