@@ -30,10 +30,12 @@ const (
 type Header map[string]string
 
 type Request struct {
-	Method string `json:"method"`
-	URL    string `json:"url"`
-	Header Header `json:"header"`
-	Body   string `json:"body"`
+	Method  string `json:"method"`
+	URL     string `json:"url"`
+	Header  Header `json:"header"`
+	Body    string `json:"body"`
+	SkipTLS bool   `json:"skip_tls"`
+	Timeout string `json:"timeout"`
 }
 
 func Parse(curl string) (*Request, error) {
@@ -89,6 +91,14 @@ func Parse(curl string) (*Request, error) {
 			state = "cookie"
 			break
 
+		case arg == "-k" || arg == "--insecure":
+			req.SkipTLS = true
+			break
+
+		case arg == "-m" || arg == "--max-time":
+			state = "timeout"
+			break
+
 		case len(arg) > 0:
 			switch state {
 			case "header":
@@ -132,6 +142,11 @@ func Parse(curl string) (*Request, error) {
 
 			case "cookie":
 				req.Header[KeyCookie] = arg
+				state = ""
+				break
+
+			case "timeout":
+				req.Timeout = arg
 				state = ""
 				break
 

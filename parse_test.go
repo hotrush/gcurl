@@ -103,6 +103,17 @@ func TestParse(t *testing.T) {
 				Header: map[string]string{},
 			},
 		},
+		{
+			"timeout and skip TLS",
+			`curl --max-time 30 -k 'https://api.sloths.com/users?token=admin'`,
+			&Request{
+				Method:  http.MethodGet,
+				URL:     "https://api.sloths.com/users?token=admin",
+				Header:  map[string]string{},
+				Timeout: "30",
+				SkipTLS: true,
+			},
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
