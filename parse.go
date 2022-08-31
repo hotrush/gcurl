@@ -177,6 +177,6 @@ func sanitize(args []string) []string {
 }
 
 func isURL(u string) bool {
-	matched, err := regexp.MatchString("^http(s)?://.*$", u)
+	matched, err := regexp.MatchString("^https?://.*$", u)
 	return matched && err == nil
 }
