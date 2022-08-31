@@ -114,6 +114,16 @@ func TestParse(t *testing.T) {
 				SkipTLS: true,
 			},
 		},
+		{
+			"repeated data fields",
+			`curl -d 'foo=bar&bar=foo' -d 'q=GoogleQuery' https://api.sloths.com/sloth/4`,
+			&Request{
+				Method: http.MethodPost,
+				URL:    "https://api.sloths.com/sloth/4",
+				Header: map[string]string{"content-type": "application/x-www-form-urlencoded"},
+				Body:   "foo=bar&bar=foo&q=GoogleQuery",
+			},
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
