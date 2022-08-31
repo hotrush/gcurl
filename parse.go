@@ -7,14 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/mattn/go-shellwords"
 )
 
-var (
-	ErrNotValidCurlCommand = errors.New("not a valid cURL command")
-)
+var ErrNotValidCurlCommand = errors.New("not a valid cURL command")
 
 const (
 	// Header map keys
@@ -43,81 +42,67 @@ func Parse(curl string) (*Request, error) {
 		return nil, fmt.Errorf("%q: %w", curl, ErrNotValidCurlCommand)
 	}
 
-	// https://github.com/mattn/go-shellwords
-	// https://github.com/tj/parse-curl.js
 	args, err := shellwords.Parse(curl)
 	if err != nil {
 		return nil, err
 	}
 
-	args = rewrite(args)
+	args = sanitize(args)
 	req := &Request{
 		Method: http.MethodGet,
 		Header: Header{},
 	}
 
-	var state string
+	var argType string
 	for _, arg := range args {
-		switch true {
-		case validURL(arg):
+		switch {
+		case isURL(arg):
 			req.URL = arg
 			break
-
 		case arg == "-A" || arg == "--user-agent":
-			state = "user-agent"
+			argType = "user-agent"
 			break
-
 		case arg == "-H" || arg == "--header":
-			state = "header"
+			argType = "header"
 			break
-
 		case arg == "-d" || arg == "--data" || arg == "--data-ascii" || arg == "--data-raw":
-			state = "data"
+			argType = "data"
 			break
-
 		case arg == "-u" || arg == "--user":
-			state = "user"
+			argType = "user"
 			break
-
 		case arg == "-I" || arg == "--head":
 			req.Method = "HEAD"
 			break
-
 		case arg == "-X" || arg == "--request":
-			state = "method"
+			argType = "method"
 			break
-
 		case arg == "-b" || arg == "--cookie":
-			state = "cookie"
+			argType = "cookie"
 			break
-
 		case arg == "-k" || arg == "--insecure":
 			req.SkipTLS = true
 			break
-
 		case arg == "-m" || arg == "--max-time":
-			state = "timeout"
+			argType = "timeout"
 			break
-
-		case len(arg) > 0:
-			switch state {
+		default:
+			switch argType {
 			case "header":
-				fields := parseField(arg)
-				req.Header[strings.ToLower(fields[0])] = strings.TrimSpace(fields[1])
-				state = ""
+				key, val, _ := strings.Cut(arg, ":")
+				req.Header[strings.ToLower(key)] = strings.TrimSpace(val)
+				argType = ""
 				break
-
 			case "user-agent":
 				req.Header[KeyUserAgent] = arg
-				state = ""
+				argType = ""
 				break
-
 			case "data":
 				if req.Method == http.MethodGet || req.Method == http.MethodHead {
 					req.Method = http.MethodPost
 				}
 
-				if !hasContentType(req.Header) {
+				if _, ok := req.Header[KeyContentType]; !ok {
 					req.Header[KeyContentType] = "application/x-www-form-urlencoded"
 				}
 
@@ -127,55 +112,47 @@ func Parse(curl string) (*Request, error) {
 					req.Body = req.Body + "&" + arg
 				}
 
-				state = ""
+				argType = ""
 				break
-
 			case "user":
 				req.Header[KeyAuthorization] = "Basic " + base64.StdEncoding.EncodeToString([]byte(arg))
-				state = ""
+				argType = ""
 				break
-
 			case "method":
 				req.Method = arg
-				state = ""
+				argType = ""
 				break
-
 			case "cookie":
 				req.Header[KeyCookie] = arg
-				state = ""
+				argType = ""
 				break
-
 			case "timeout":
 				req.Timeout = arg
-				state = ""
-				break
-
-			default:
+				argType = ""
 				break
 			}
 		}
-
 	}
 
 	// Format JSON body.
 	if val := req.Header[KeyContentType]; val == ContentTypeJSON {
-		jsonData := make(map[string]interface{})
-		if err := json.NewDecoder(strings.NewReader(req.Body)).Decode(&jsonData); err != nil {
+		data := make(map[string]interface{})
+		if err := json.Unmarshal([]byte(req.Body), &data); err != nil {
 			return nil, err
+		}
 
-		}
-		buffer := &bytes.Buffer{}
-		encoder := json.NewEncoder(buffer)
-		encoder.SetEscapeHTML(false)
-		if err = encoder.Encode(jsonData); err != nil {
+		buf := &bytes.Buffer{}
+		enc := json.NewEncoder(buf)
+		enc.SetEscapeHTML(false)
+		if err = enc.Encode(data); err != nil {
 			return nil, err
 		}
-		req.Body = strings.ReplaceAll(buffer.String(), "\n", "")
+		req.Body = strings.ReplaceAll(buf.String(), "\n", "")
 	}
 	return req, err
 }
 
-func rewrite(args []string) []string {
+func sanitize(args []string) []string {
 	res := make([]string, 0)
 	for _, arg := range args {
 		arg = strings.TrimSpace(arg)
@@ -183,31 +160,23 @@ func rewrite(args []string) []string {
 			continue
 		}
 
+		// Remove new lines characters.
 		if strings.Contains(arg, "\n") {
 			arg = strings.ReplaceAll(arg, "\n", "")
 		}
 
-		// split request method
-		if strings.Index(arg, "-X") == 0 {
+		// Split method when -XMETHOD are concatenated.
+		if strings.HasPrefix(arg, "-X") && len(arg) > 2 {
 			res = append(res, arg[0:2])
 			res = append(res, arg[2:])
-		} else {
-			res = append(res, arg)
+			continue
 		}
+		res = append(res, arg)
 	}
 	return res
 }
 
-func validURL(u string) bool {
-	return strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")
-}
-
-func parseField(arg string) []string {
-	index := strings.Index(arg, ":")
-	return []string{arg[0:index], arg[index+2:]}
-}
-
-func hasContentType(h Header) bool {
-	_, ok := h[KeyContentType]
-	return ok
+func isURL(u string) bool {
+	matched, err := regexp.MatchString("^http(s)?://.*$", u)
+	return matched && err == nil
 }
