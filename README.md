@@ -1,7 +1,9 @@
-# parse-curl
-解析 curl 命令，返回一个表示请求的对象
+# gcurl
+
+`gcurl` is an cURL command parser written in pure Go.
 
 ## example
+
 ```shell
 curl 'http://google.com/' \
 -H 'Accept-Encoding: gzip, deflate, sdch' \
@@ -12,6 +14,7 @@ curl 'http://google.com/' \
 -H 'Connection: keep-alive' \
 --compressed
 ```
+
 out
 ```json
 {
@@ -24,10 +27,6 @@ out
     "Connection": "keep-alive",
     "Upgrade-Insecure-Requests": "1",
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36"
-  },
-  "body": ""
+  }
 }
 ```
-
-## reference
-* https://github.com/tj/parse-curl.js

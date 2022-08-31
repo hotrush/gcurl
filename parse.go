@@ -32,7 +32,7 @@ type Request struct {
 	Method  string `json:"method"`
 	URL     string `json:"url"`
 	Header  Header `json:"header"`
-	Body    string `json:"body"`
+	Body    string `json:"body,omitempty"`
 	SkipTLS bool   `json:"skip_tls"`
 	Timeout string `json:"timeout"`
 }
@@ -111,7 +111,6 @@ func Parse(curl string) (*Request, error) {
 				} else {
 					req.Body = req.Body + "&" + arg
 				}
-
 				argType = ""
 				break
 			case "user":
@@ -135,21 +134,29 @@ func Parse(curl string) (*Request, error) {
 	}
 
 	// Format JSON body.
-	if val := req.Header[KeyContentType]; val == ContentTypeJSON {
-		data := make(map[string]interface{})
-		if err := json.Unmarshal([]byte(req.Body), &data); err != nil {
+	if req.Header[KeyContentType] == ContentTypeJSON {
+		jsonBody, err := formatJSONBody(req.Body)
+		if err != nil {
 			return nil, err
 		}
-
-		buf := &bytes.Buffer{}
-		enc := json.NewEncoder(buf)
-		enc.SetEscapeHTML(false)
-		if err = enc.Encode(data); err != nil {
-			return nil, err
-		}
-		req.Body = strings.ReplaceAll(buf.String(), "\n", "")
+		req.Body = jsonBody
 	}
-	return req, err
+	return req, nil
+}
+
+func formatJSONBody(body string) (string, error) {
+	data := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(body), &data); err != nil {
+		return "", err
+	}
+
+	buf := &bytes.Buffer{}
+	enc := json.NewEncoder(buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(data); err != nil {
+		return "", err
+	}
+	return strings.ReplaceAll(buf.String(), "\n", ""), nil
 }
 
 func sanitize(args []string) []string {
