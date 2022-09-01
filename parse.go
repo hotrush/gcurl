@@ -24,6 +24,7 @@ const (
 
 	// Content-Types
 	ContentTypeJSON = "application/json"
+	ContentTypeForm = "application/x-www-form-urlencoded"
 )
 
 type Header map[string]string
@@ -68,6 +69,10 @@ func Parse(curl string) (*Request, error) {
 		case arg == "-d" || arg == "--data" || arg == "--data-ascii" || arg == "--data-raw":
 			argType = "data"
 			break
+		case arg == "-F" || arg == "--form" || arg == "--form-string":
+			req.Header[KeyContentType] = ContentTypeForm
+			argType = "data"
+			break
 		case arg == "-u" || arg == "--user":
 			argType = "user"
 			break
@@ -103,7 +108,7 @@ func Parse(curl string) (*Request, error) {
 				}
 
 				if _, ok := req.Header[KeyContentType]; !ok {
-					req.Header[KeyContentType] = "application/x-www-form-urlencoded"
+					req.Header[KeyContentType] = ContentTypeForm
 				}
 
 				if len(req.Body) == 0 {
