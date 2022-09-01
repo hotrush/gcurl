@@ -124,6 +124,15 @@ func TestParse(t *testing.T) {
 				Body:   "foo=bar&bar=foo&q=GoogleQuery",
 			},
 		},
+		{
+			"custom authorization",
+			`curl -H 'Authorization: Token some-custom-auth' https://api.sloths.com/sloth/4`,
+			&Request{
+				Method: http.MethodGet,
+				URL:    "https://api.sloths.com/sloth/4",
+				Header: map[string]string{"authorization": "Token some-custom-auth"},
+			},
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
