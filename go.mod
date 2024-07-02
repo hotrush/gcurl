@@ -1,6 +1,6 @@
-module github.com/vic3lord/gcurl
+module github.com/hotrush/gcurl
 
-go 1.19
+go 1.21
 
 require github.com/mattn/go-shellwords v1.0.12
 

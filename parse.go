@@ -59,49 +59,36 @@ func Parse(curl string) (*Request, error) {
 		switch {
 		case isURL(arg):
 			req.URL = arg
-			break
 		case arg == "-A" || arg == "--user-agent":
 			argType = "user-agent"
-			break
 		case arg == "-H" || arg == "--header":
 			argType = "header"
-			break
 		case arg == "-d" || arg == "--data" || arg == "--data-ascii" || arg == "--data-raw":
 			argType = "data"
-			break
 		case arg == "-F" || arg == "--form" || arg == "--form-string":
 			req.Header[KeyContentType] = ContentTypeForm
 			argType = "data"
-			break
 		case arg == "-u" || arg == "--user":
 			argType = "user"
-			break
 		case arg == "-I" || arg == "--head":
 			req.Method = "HEAD"
-			break
 		case arg == "-X" || arg == "--request":
 			argType = "method"
-			break
 		case arg == "-b" || arg == "--cookie":
 			argType = "cookie"
-			break
 		case arg == "-k" || arg == "--insecure":
 			req.SkipTLS = true
-			break
 		case arg == "-m" || arg == "--max-time":
 			argType = "timeout"
-			break
 		default:
 			switch argType {
 			case "header":
 				key, val, _ := strings.Cut(arg, ":")
 				req.Header[strings.ToLower(key)] = strings.TrimSpace(val)
 				argType = ""
-				break
 			case "user-agent":
 				req.Header[KeyUserAgent] = arg
 				argType = ""
-				break
 			case "data":
 				if req.Method == http.MethodGet || req.Method == http.MethodHead {
 					req.Method = http.MethodPost
@@ -117,29 +104,24 @@ func Parse(curl string) (*Request, error) {
 					req.Body = req.Body + "&" + arg
 				}
 				argType = ""
-				break
 			case "user":
 				req.Header[KeyAuthorization] = "Basic " + base64.StdEncoding.EncodeToString([]byte(arg))
 				argType = ""
-				break
 			case "method":
 				req.Method = arg
 				argType = ""
-				break
 			case "cookie":
 				req.Header[KeyCookie] = arg
 				argType = ""
-				break
 			case "timeout":
 				req.Timeout = arg
 				argType = ""
-				break
 			}
 		}
 	}
 
 	// Format JSON body.
-	if req.Header[KeyContentType] == ContentTypeJSON {
+	if req.Header[KeyContentType] == ContentTypeJSON && req.Body != "" {
 		jsonBody, err := formatJSONBody(req.Body)
 		if err != nil {
 			return nil, err

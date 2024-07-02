@@ -15,28 +15,39 @@ func TestParse(t *testing.T) {
 	}{
 		{
 			"simple get",
-			"curl https://api.sloths.com",
+			"curl https://api.site.com",
 			&Request{
 				Method: http.MethodGet,
-				URL:    "https://api.sloths.com",
+				URL:    "https://api.site.com",
 				Header: map[string]string{},
 			},
 		},
 		{
+			"simple get",
+			"curl -H \"Content-Type: application/json\" https://api.site.com",
+			&Request{
+				Method: http.MethodGet,
+				URL:    "https://api.site.com",
+				Header: map[string]string{
+					"content-type": "application/json",
+				},
+			},
+		},
+		{
 			"simple put",
-			"curl -XPUT https://api.sloths.com/sloth/4",
+			"curl -XPUT https://api.site.com/sloth/4",
 			&Request{
 				Method: http.MethodPut,
-				URL:    "https://api.sloths.com/sloth/4",
+				URL:    "https://api.site.com/sloth/4",
 				Header: map[string]string{},
 			},
 		},
 		{
 			"encoding gzip",
-			`curl -H "Accept-Encoding: gzip" --compressed http://api.sloths.com`,
+			`curl -H "Accept-Encoding: gzip" --compressed http://api.site.com`,
 			&Request{
 				Method: http.MethodGet,
-				URL:    "http://api.sloths.com",
+				URL:    "http://api.site.com",
 				Header: map[string]string{
 					"accept-encoding": "gzip",
 				},
@@ -44,39 +55,39 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"delete sloth",
-			"curl -X DELETE https://api.sloths.com/sloth/4",
+			"curl -X DELETE https://api.site.com/sloth/4",
 			&Request{
 				Method: http.MethodDelete,
-				URL:    "https://api.sloths.com/sloth/4",
+				URL:    "https://api.site.com/sloth/4",
 				Header: map[string]string{},
 			},
 		},
 		{
 			"url encoded data",
-			`curl -d "foo=bar" https://api.sloths.com/sloth/4`,
+			`curl -d "foo=bar" https://api.site.com/sloth/4`,
 			&Request{
 				Method: http.MethodPost,
-				URL:    "https://api.sloths.com/sloth/4",
+				URL:    "https://api.site.com/sloth/4",
 				Header: map[string]string{"content-type": "application/x-www-form-urlencoded"},
 				Body:   "foo=bar",
 			},
 		},
 		{
 			"JSON",
-			`curl -d '{"hello": "world"}' -H 'content-type: application/json' https://api.sloths.com/sloth/4`,
+			`curl -d '{"hello": "world"}' -H 'content-type: application/json' https://api.site.com/sloth/4`,
 			&Request{
 				Method: http.MethodPost,
-				URL:    "https://api.sloths.com/sloth/4",
+				URL:    "https://api.site.com/sloth/4",
 				Header: map[string]string{"content-type": "application/json"},
 				Body:   `{"hello":"world"}`,
 			},
 		},
 		{
 			"user agent",
-			`curl -H "Accept: text/plain" --header "User-Agent: slothy" https://api.sloths.com`,
+			`curl -H "Accept: text/plain" --header "User-Agent: slothy" https://api.site.com`,
 			&Request{
 				Method: http.MethodGet,
-				URL:    "https://api.sloths.com",
+				URL:    "https://api.site.com",
 				Header: map[string]string{
 					"accept":     "text/plain",
 					"user-agent": "slothy",
@@ -85,10 +96,10 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"cookie",
-			`curl --cookie 'species=sloth;type=galactic' slothy https://api.sloths.com`,
+			`curl --cookie 'species=sloth;type=galactic' slothy https://api.site.com`,
 			&Request{
 				Method: http.MethodGet,
-				URL:    "https://api.sloths.com",
+				URL:    "https://api.site.com",
 				Header: map[string]string{
 					"cookie": "species=sloth;type=galactic",
 				},
@@ -96,19 +107,19 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"location",
-			`curl --location --request GET 'https://api.sloths.com/users?token=admin'`,
+			`curl --location --request GET 'https://api.site.com/users?token=admin'`,
 			&Request{
 				Method: http.MethodGet,
-				URL:    "https://api.sloths.com/users?token=admin",
+				URL:    "https://api.site.com/users?token=admin",
 				Header: map[string]string{},
 			},
 		},
 		{
 			"timeout and skip TLS",
-			`curl --max-time 30 -k 'https://api.sloths.com/users?token=admin'`,
+			`curl --max-time 30 -k 'https://api.site.com/users?token=admin'`,
 			&Request{
 				Method:  http.MethodGet,
-				URL:     "https://api.sloths.com/users?token=admin",
+				URL:     "https://api.site.com/users?token=admin",
 				Header:  map[string]string{},
 				Timeout: "30",
 				SkipTLS: true,
@@ -116,20 +127,20 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"repeated data fields",
-			`curl -d 'foo=bar&bar=foo' -d 'q=GoogleQuery' https://api.sloths.com/sloth/4`,
+			`curl -d 'foo=bar&bar=foo' -d 'q=GoogleQuery' https://api.site.com/sloth/4`,
 			&Request{
 				Method: http.MethodPost,
-				URL:    "https://api.sloths.com/sloth/4",
+				URL:    "https://api.site.com/sloth/4",
 				Header: map[string]string{"content-type": "application/x-www-form-urlencoded"},
 				Body:   "foo=bar&bar=foo&q=GoogleQuery",
 			},
 		},
 		{
 			"custom authorization",
-			`curl -H 'Authorization: Token some-custom-auth' https://api.sloths.com/sloth/4`,
+			`curl -H 'Authorization: Token some-custom-auth' https://api.site.com/sloth/4`,
 			&Request{
 				Method: http.MethodGet,
-				URL:    "https://api.sloths.com/sloth/4",
+				URL:    "https://api.site.com/sloth/4",
 				Header: map[string]string{"authorization": "Token some-custom-auth"},
 			},
 		},
